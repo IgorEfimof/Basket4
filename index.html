@@ -1,9 +1,10 @@
+```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon196.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon180.png">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="BSK4">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1200,7 +1201,7 @@
                     NBA (4×12 мин)
                     <div class="championship-format">4 периода по 12 минут</div>
                 </div>
-                <div class="championship-option" data-format="fibra" data-periods="4" data-period-length="10" data-ot-length="5">
+                <div class="championship-option" data-format="fiba" data-periods="4" data-period-length="10" data-ot-length="5">
                     ФИБА (4×10 мин)
                     <div class="championship-format">4 периода по 10 минут</div>
                 </div>
@@ -1759,7 +1760,7 @@
         // Конфигурация чемпионатов
         const championships = {
             'nba': { name: 'NBA (4×12 мин)', periods: 4, periodLength: 12, otLength: 5, description: '4 периода по 12 минут, овертайм 5 минут' },
-            'fibra': { name: 'ФИБА (4×10 мин)', periods: 4, periodLength: 10, otLength: 5, description: '4 периода по 10 минут, овертайм 5 минут' },
+            'fiba': { name: 'ФИБА (4×10 мин)', periods: 4, periodLength: 10, otLength: 5, description: '4 периода по 10 минут, овертайм 5 минут' },
             'three3-long': { name: '3×3 (4×12 мин)', periods: 4, periodLength: 12, otLength: 2, description: '4 периода по 12 минут, овертайм 2 минуты' },
             'three3-short': { name: '3×3 (4×10 мин)', periods: 4, periodLength: 10, otLength: 2, description: '4 периода по 10 минут, овертайм 2 минуты' },
             'four4': { name: '4×4 (2×10 мин)', periods: 2, periodLength: 10, otLength: 3, description: '2 тайма по 10 минут, овертайм 3 минуты' },
@@ -1769,7 +1770,7 @@
         // Текущий выбранный чемпионат
         let currentChampionship = 'nba';
         
-        // Текульный выбранный пол
+        // Текущий выбранный пол
         let currentGender = 'men';
         
         // Глобальные переменные для хранения данных анализа
@@ -1787,7 +1788,7 @@
             const knownFullMoon = new Date(Date.UTC(2000, 0, 6, 18, 14, 0));
             const lunarCycle = 29.530588853; // дней в лунном цикле
             
-            // Вычисляем разницу в дняс
+            // Вычисляем разницу в днях
             const diffInMs = date - knownFullMoon;
             const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
             
@@ -1813,13 +1814,10 @@
         // Функция для получения иконки фазы Луны
         function getMoonPhaseIcon(phase) {
             if (phase < 0.03 || phase >= 0.97) return "fa-moon";
-            if (phase < 0.22) return "fa-moon";
-            if (phase < 0.28) return "fa-moon";
-            if (phase < 0.47) return "fa-moon";
-            if (phase < 0.53) return "fa-moon";
-            if (phase < 0.72) return "fa-moon";
-            if (phase < 0.78) return "fa-moon";
-            return "fa-moon";
+            if (phase < 0.25) return "fa-moon"; // Растущая
+            if (phase < 0.5) return "fa-moon"; // Первая четверть
+            if (phase < 0.75) return "fa-moon"; // Полнолуние
+            return "fa-moon"; // Убывающая
         }
         
         // Функция для расчета влияния Луны на команды
@@ -2519,11 +2517,21 @@
             const gamePace = totalPoints > 0 ? (totalPoints / elapsedMinutes).toFixed(2) : "0.00";
             
             // Рассчитываем эффективность команд на основе статистики
-            currentTeamAEfficiency = calculateEfficiency(teamATwoPointers, teamAThreePointers, teamAFreeThrows, teamARebounds, teamATurnovers) * currentMoonInfluence.influence;
-            currentTeamBEfficiency = calculateEfficiency(teamBTwoPointers, teamBThreePointers, teamBFreeThrows, teamBRebounds, teamBTurnovers) * currentMoonInfluence.influence;
+            const teamAEff = calculateTeamEfficiency(teamATwoPointers, teamAThreePointers, teamAFreeThrows, teamARebounds, teamATurnovers, teamAFouls, currentPeriod);
+            currentTeamAEfficiency = {
+                offense: teamAEff.offense * currentMoonInfluence.influence,
+                defense: teamAEff.defense * currentMoonInfluence.influence,
+                overall: teamAEff.overall * currentMoonInfluence.influence
+            };
+            const teamBEff = calculateTeamEfficiency(teamBTwoPointers, teamBThreePointers, teamBFreeThrows, teamBRebounds, teamBTurnovers, teamBFouls, currentPeriod);
+            currentTeamBEfficiency = {
+                offense: teamBEff.offense * currentMoonInfluence.influence,
+                defense: teamBEff.defense * currentMoonInfluence.influence,
+                overall: teamBEff.overall * currentMoonInfluence.influence
+            };
             
             // Корректируем темп игры на основе эффективности
-            const efficiencyFactor = (currentTeamAEfficiency + currentTeamBEfficiency) / 2;
+            const efficiencyFactor = (currentTeamAEfficiency.overall + currentTeamBEfficiency.overall) / 2;
             
             // Учет времени матча для корректировки прогноза
             currentTimeFactor = calculateTimeFactor(currentPeriod, totalRemainingSeconds, champ);
@@ -2550,7 +2558,7 @@
             
             // Прогнозируем окончательный счет
             const pointsDiff = scoreA - scoreB;
-            const efficiencyDiff = currentTeamAEfficiency - currentTeamBEfficiency;
+            const efficiencyDiff = currentTeamAEfficiency.overall - currentTeamBEfficiency.overall;
             let projectedDiff;
             
             if (!isOvertime) {
@@ -2563,7 +2571,7 @@
             }
             
             // Рассчитываем вероятности победы
-            const winProbabilityA = calculateWinProbability(scoreA, scoreB, currentTeamAEfficiency, currentTeamBEfficiency, elapsedMinutes, currentPeriod, currentTimeFactor, champ, currentGenderFactor);
+            const winProbabilityA = calculateWinProbability(scoreA, scoreB, currentTeamAEfficiency.overall, currentTeamBEfficiency.overall, elapsedMinutes, currentPeriod, currentTimeFactor, champ, currentGenderFactor);
             const winProbabilityB = 100 - winProbabilityA;
             
             // Рассчитываем наши коэффициенты на основе вероятностей
@@ -2821,7 +2829,7 @@
             let probability;
             
             if (diff <= 5) {
-                probability = isOver ? 50 : 50;
+                probability = 50;
             } else if (diff <= 10) {
                 probability = isOver ? (totalProjected > totalLine ? 65 : 35) : (totalProjected > totalLine ? 35 : 65);
             } else {
@@ -2920,11 +2928,12 @@
             let freeThrowPercentage = 0.7;
             
             if (freeThrowMatch) {
-                const made = parseInt(freeThrowMatch[1]);
-                const attempts = parseInt(freeThrowMatch[2]);
+                const made = parseInt(freeThrowMatch[1]) || 0;
+                const attempts = parseInt(freeThrowMatch[2]) || 0;
                 freeThrowPercentage = attempts > 0 ? made / attempts : 0.7;
             }
             
+            // Рассчитываем эффективность на основе различных факторов
             const points = twoPointers * 2 + threePointers * 3;
             const shootingEfficiency = (twoPointers + threePointers) > 0 ? points / (twoPointers + threePointers) / 2 : 0.8;
             const reboundEfficiency = rebounds / 40;
@@ -3151,8 +3160,8 @@
                     }
                     
                     // Рассчитываем средние значения
-                    const avgTeamAWins = (teamAWins / 1).toFixed(1);
-                    const avgTeamBWins = (teamBWins / 1).toFixed(1);
+                    const avgTeamAWins = (teamAWins / 100 * 100).toFixed(1);
+                    const avgTeamBWins = (teamBWins / 100 * 100).toFixed(1);
                     const avgTotalPoints = (totalPoints / 100).toFixed(1);
                     const avgDiff = (totalDiff / 100).toFixed(1);
                     
